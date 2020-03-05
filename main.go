@@ -30,7 +30,8 @@ func main() {
 	defer db.Close()
 	// Migrate the schema
 	db.AutoMigrate(&Message{})
-
+	// Start shell
+	go ShellRun(db)
     fmt.Println("Сервер ждет подключений...")
     for {
         conn, err := listener.Accept()
