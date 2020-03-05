@@ -15,6 +15,8 @@ type Message struct {
 }
 
 func main() {
+	flog, logger := LogInit("main")
+	defer flog.Close()
     listener, err := net.Listen("tcp", ":9876")
     if err != nil {
         fmt.Println(err)
@@ -33,22 +35,24 @@ func main() {
 	db.AutoMigrate(&Message{})
 	// Start shell
 	go ShellRun(db)
-    fmt.Println("Сервер ждет подключений...")
+    logger.Println("Сервер ждет подключений...")
     for {
         conn, err := listener.Accept()
 		if err != nil {
-            fmt.Println(err)
-			fmt.Printf("%s -> Отключен\n", conn.RemoteAddr().String())
+            logger.Panicln(err)
+			logger.Printf("%s -> Отключен\n", conn.RemoteAddr().String())
             conn.Close()
 			continue
         }
-		fmt.Printf("%s <- Подключен\n", conn.RemoteAddr().String())
+		logger.Printf("%s <- Подключен\n", conn.RemoteAddr().String())
 		go Communicates(conn, db)
     }
 }
 
 func Communicates(conn net.Conn, db *gorm.DB) {
 	defer conn.Close()
+	flog, logger := LogInit("Communicates")
+	defer flog.Close()
 	remoteAddr := conn.RemoteAddr().String()
 	for {
 		// Считываем полученные в запросе данные
@@ -56,14 +60,14 @@ func Communicates(conn net.Conn, db *gorm.DB) {
 		conn.SetDeadline(time.Now().Add(time.Second*30))
 		req, err := conn.Read(inputBuff)
         if req == 0 || err != nil {
-            fmt.Println("Read error:", err)
-			fmt.Printf("%s <- Соединение закрыта\n", remoteAddr)
+            logger.Println("Read error:", err)
+			logger.Printf("%s <- Соединение закрыта\n", remoteAddr)
             break
 		}else {
-			fmt.Printf("%s <- Данные получены\n", remoteAddr)
+			logger.Printf("%s <- Данные получены\n", remoteAddr)
 			//Создаю новую запись в базе данных
 			db.Create(&Message{Content: string(inputBuff), RemoteAddr: remoteAddr})
-			fmt.Printf("%s <- Данные сохранен\n", remoteAddr)
+			logger.Printf("%s <- Данные сохранен\n", remoteAddr)
 		}
 		fmt.Println()
 	}
