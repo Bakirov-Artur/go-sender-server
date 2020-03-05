@@ -5,6 +5,7 @@ import (
     "net"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
+	"time"
 )
 
 type Message struct {
@@ -52,6 +53,7 @@ func Communicates(conn net.Conn, db *gorm.DB) {
 	for {
 		// Считываем полученные в запросе данные
         inputBuff := make([]byte, (1024 * 4))
+		conn.SetDeadline(time.Now().Add(time.Second*30))
 		req, err := conn.Read(inputBuff)
         if req == 0 || err != nil {
             fmt.Println("Read error:", err)
